@@ -1,0 +1,13 @@
+{
+  "name": "com.MartinMicklethwaite.MMUnityLibrary",
+  "version": "1.0.0",
+  "displayName": "Unity utils developed by Martin Micklethwaite",
+  "description": "A collection of common Unity utilities and assets across multiple projects",
+  "unity": "6000.0",
+  "dependencies": {
+  },
+  "author": {
+    "name": "Martin Micklethwaite",
+    "url": "https://www.martinmicklethwaite.com"
+  }
+}
