@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace MM
@@ -7,49 +7,58 @@ namespace MM
 	{
 #region Constants
 		// Maths constants
-		public const float kOneOverRootTwo = 0.7071f;
+		public const float kSqrt2_Reciprocal = 0.7071f;
 		
 		// Utility constants
 		public const float kFloatEpsilon = 0.0001f;
 #endregion
 		
 #region Comparison
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static float Difference( float a, float b ) =>
 			Mathf.Abs( a - b );
 		
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static bool Approximately( float a, float b, float epsilon = kFloatEpsilon ) =>
 			Mathf.Abs( a - b ) <= epsilon;
 		
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static bool Approximately( Vector2 a, Vector2 b, float epsilon = kFloatEpsilon ) =>
 			Difference(a.x, b.x) +
 			Difference(a.y, b.y) < kFloatEpsilon;
 		
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static bool ApproximatelyAll( Vector2 a, Vector2 b, float epsilon = kFloatEpsilon ) =>
 			Approximately(a.x, b.x, kFloatEpsilon) &&
 			Approximately(a.y, b.y, kFloatEpsilon);
 		
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static bool Approximately( Vector3 a, Vector3 b, float epsilon = kFloatEpsilon ) =>
 			Difference(a.x, b.x) +
 			Difference(a.y, b.y) +
 			Difference(a.z, b.z) < kFloatEpsilon;		
 		
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static bool ApproximatelyAll( Vector3 a, Vector3 b, float epsilon = kFloatEpsilon ) =>
 			Approximately(a.x, b.x, kFloatEpsilon) &&
 			Approximately(a.y, b.y, kFloatEpsilon) &&
 			Approximately(a.z, b.z, kFloatEpsilon);		
 		
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static bool Approximately( Quaternion a, Quaternion b, float epsilon = kFloatEpsilon ) =>
 			Difference(a.x, b.x) +
 			Difference(a.y, b.y) +
 			Difference(a.z, b.z) +
 			Difference(a.w, b.w) < kFloatEpsilon;
 		
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static bool ApproximatelyAll( Quaternion a, Quaternion b, float epsilon = kFloatEpsilon ) =>
 			Approximately(a.x, b.x, kFloatEpsilon) &&
 			Approximately(a.y, b.y, kFloatEpsilon) &&
 			Approximately(a.z, b.z, kFloatEpsilon) &&
 			Approximately(a.w, b.w, kFloatEpsilon);
 
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static bool Approximately( Matrix4x4 a, Matrix4x4 b, float epsilon = kFloatEpsilon ) =>
 			Difference( a.m00, b.m00 ) +
 			Difference( a.m01, b.m01 ) +
@@ -68,6 +77,7 @@ namespace MM
 			Difference( a.m32, b.m32 ) +
 			Difference( a.m33, b.m33 ) < epsilon;
 		
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static bool ApproximatelyAll( Matrix4x4 a, Matrix4x4 b, float epsilon = kFloatEpsilon ) =>
 			Approximately( a.m00, b.m00, kFloatEpsilon ) &&
 			Approximately( a.m01, b.m01, kFloatEpsilon ) &&
@@ -86,8 +96,8 @@ namespace MM
 			Approximately( a.m32, b.m32, kFloatEpsilon ) &&
 			Approximately( a.m33, b.m33, kFloatEpsilon );
 		
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static float Max( Vector3 v ) => Mathf.Max(v.x, v.y, v.z);
 #endregion
-		
 	}
 }

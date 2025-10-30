@@ -54,6 +54,10 @@ namespace MM
 			return outVertices;
 		}
 
+		/**
+		 * Gets line points for a polygon.
+		 * Input polygon vertices should be ordered & create a convex polygon.
+		 */
 		public static List<Vector3> GetRoundedPolygonPolylinePoints(
 			Vector3[] vertices,
 			float radius,
@@ -74,8 +78,7 @@ namespace MM
 				}
 				else if( vertices.Length > 1 )
 				{
-					// Multiple vertices - a convex hull
-					// (NOTE: Vertices need to be ordered)
+					// Multiple vertices - a convex hull (ordered vertices)
 					int numVertices = vertices.Length;
 					for( int i = 0; i < numVertices; ++i )
 					{

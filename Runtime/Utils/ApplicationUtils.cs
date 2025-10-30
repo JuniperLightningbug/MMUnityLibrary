@@ -12,11 +12,11 @@ namespace MM
 			BIsQuitting = true;
 		}
 
-		[RuntimeInitializeOnLoadMethod] 
-		static void RunOnStart()
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)] 
+		static void OnRuntimeInitialise()
 		{
 			BIsQuitting = false;
-			Application.quitting += OnQuit; 
+			Application.quitting += OnQuit;
 		} 
 	}
 }
