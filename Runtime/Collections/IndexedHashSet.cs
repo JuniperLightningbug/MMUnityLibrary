@@ -4,43 +4,57 @@ using UnityEngine;
 
 namespace MM
 {
-	/**
-	 *** Enumerable dictionary/list combination where:
-	 *
-	 ** [Pros:]
-	 * - Each item can only be represented once (enforced)
-	 * - Add and Remove are both O(1)
-	 * (If we pretend that dictionaries have O(1) lookups)
-	 * - Add() and Remove() during enumeration is safe (no items are skipped or parsed twice)
-	 * - Indexed iteration is fast (dense array)
-	 *
-	 ** [Cons:]
-	 * - Nested enumerations of the same IndexedHashSet object instance are not supported at all
-	 * (This is the trade-off for the safe quick remove functionality: the enumeration is stored on the object itself)
-	 * - Order is mutable and not guaranteed
-	 *
-	 ** Usage:
-	 * - For any non-recursive operations that might remove items, use in-built enumeration (foreach)
-	 * - For any operations that do not remove items, it's safe to access and increment indices directly (for)
-	 */
-	public class IndexedHashSet<T> : IReadOnlyList<T>
+	/// <summary>
+	/// Enumerable dictionary/list combination where:
+	/// - Each item can only be represented once
+	/// - Add and Remove are both O(1) (ish, like a hash set)
+	/// - Indexed iteration / enumeration is fast (dense array)
+	/// - Order is not guaranteed after Remove is first called (quick swap remove)
+	/// </summary>
+	[System.Serializable]
+	public class IndexedHashSet<T> : IReadOnlyList<T>, ISerializationCallbackReceiver
 	{
-		private readonly List<T> _list = new List<T>();
-		private readonly Dictionary<T, int> _indices = new Dictionary<T, int>();
+		[SerializeField] private List<T> _list;
+		private readonly Dictionary<T, int> _indices;
 
-		/*
-		 * Note: storing this here is how we can safely remove items during enumeration, but it also prohibits nested
-		 * enumerations over the same IndexedHashSet<T> instance
-		 */
-		private int _enumeratorIdx = -1;
-		public int _enumeratorCount = 0; // Tracked for debugging only - warn user about nested enumerations
+#region Constructors (if data provided on initialisation - not required)
+
+		public IndexedHashSet()
+		{
+			_list = new List<T>();
+			_indices = new Dictionary<T, int>();
+		}
+
+		public IndexedHashSet( T[] fromArray )
+		{
+			_list = new List<T>( fromArray );
+			_indices = new Dictionary<T, int>( fromArray.Length );
+
+#if UNITY_EDITOR
+			if( Application.isPlaying )
+#endif
+				RecalculateIndexDictionary();
+		}
+
+		public IndexedHashSet( List<T> fromList )
+		{
+			_list = new List<T>( fromList );
+			_indices = new Dictionary<T, int>( fromList.Count );
+
+#if UNITY_EDITOR
+			if( Application.isPlaying )
+#endif
+				RecalculateIndexDictionary();
+		}
+
+#endregion
+
+#region Interface
 
 		public string ContentString()
 		{
 			return string.Join( ", ", _list.ToArray() );
 		}
-
-#region O(1) Operations
 
 		public bool Add( T item )
 		{
@@ -55,44 +69,15 @@ namespace MM
 
 		public bool Remove( T item )
 		{
-			int removeIdx;
-			if( !_indices.TryGetValue( item, out removeIdx ) )
+			if( !_indices.TryGetValue( item, out int removeIdx ) ||
+			    removeIdx >= _list.Count )
 			{
 				return false;
 			}
 
-			// Quick remove - swap with the last value (if necessary)
-			if( removeIdx < _list.Count - 1 )
-			{
-				/*
-				 * Guard for enumeration:
-				 * Make sure the last item in the list is swapping to a position ahead of the current _enumeratorIdx
-				 */
-				if( removeIdx <= _enumeratorIdx )
-				{
-					if( removeIdx < _enumeratorIdx )
-					{
-						/*
-						 * If the item to remove has already been passed:
-						 * - Move the current item to the position of the deleted item
-						 * - Queue the current position for the quick-remove-swap instead of the one already enumerated
-						 */
-						_list[removeIdx] = _list[_enumeratorIdx];
-						_indices[_list[_enumeratorIdx]] = removeIdx;
-						removeIdx = _enumeratorIdx;
-					}
-
-					/*
-					 * The current _enumeratorIdx item will swap with the last list item.
-					 * Backtrack by 1 so we don't skip it.
-					 */
-					--_enumeratorIdx;
-				}
-
-				// Now do the swap with the clamped removeIdx
-				_list[removeIdx] = _list[_list.Count - 1];
-				_indices[_list[_enumeratorIdx]] = removeIdx;
-			}
+			// Swap with the last item
+			_list[removeIdx] = _list[_list.Count - 1];
+			_indices[_list[removeIdx]] = removeIdx;
 
 			// Now, remove the last list item
 			_list.RemoveAt( _list.Count - 1 );
@@ -106,6 +91,10 @@ namespace MM
 			_indices.Clear();
 		}
 
+		public T[] ToArray() => _list.ToArray();
+
+		public IReadOnlyList<T> GetList() => _list.AsReadOnly();
+
 #endregion
 
 #region IReadOnlyList
@@ -114,56 +103,66 @@ namespace MM
 
 		public T this[ int idx ] => (idx < _list.Count && idx >= 0) ? _list[idx] : default;
 
-		public IEnumerator<T> GetEnumerator()
-		{
-#if DEBUG
-			if( _enumeratorCount > 0 )
-			{
-				Debug.LogWarningFormat( "Nested enumerations for {0} are not supported", GetType() );
-			}
-#endif
-			return new IndexedHashSetEnumerator( this );
-		}
-
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
 		}
 
-		private struct IndexedHashSetEnumerator : IEnumerator<T>
+		public IEnumerator<T> GetEnumerator()
 		{
-			private IndexedHashSet<T> _target;
+			return _list.GetEnumerator();
+		}
 
-			public IndexedHashSetEnumerator( IndexedHashSet<T> target )
+#endregion
+
+#region ISerializationCallbackReceiver
+
+		public void OnBeforeSerialize()
+		{
+		}
+
+		public void OnAfterDeserialize()
+		{
+			/*
+			 * The list element is serialised, and is the source of truth for serialised modifications.
+			 * On entering play mode, or on changing the serialised list during playmode, we need to
+			 * regenerate the index dictionary.
+			 */
+
+			// Sanity-check input list first
+			for( int i = _list.Count - 1; i >= 0; --i )
 			{
-				_target = target;
-				++_target._enumeratorCount;
-				Reset();
-			}
-
-			public bool MoveNext()
-			{
-				_target._enumeratorIdx++;
-				return _target._enumeratorIdx < _target.Count;
-			}
-
-			public void Reset()
-			{
-				_target._enumeratorIdx = -1;
-			}
-
-			object IEnumerator.Current => Current;
-			public T Current => _target[_target._enumeratorIdx];
-
-			public void Dispose()
-			{
-				if( _target != null )
+				if( _list[i] == null )
 				{
-					--_target._enumeratorCount;
+					_list.RemoveAt( i );
+				}
+			}
+
+			// Regenerate dictionary content from list
+			RecalculateIndexDictionary();
+		}
+
+#endregion
+
+#region Bookkeeping
+
+		private void RecalculateIndexDictionary()
+		{
+			_indices.Clear();
+
+			// Second pass for assignments (reverse-order removal could affect assigned indices)
+			for( int i = 0; i < _list.Count; ++i )
+			{
+				if( !_indices.TryAdd( _list[i], i ) )
+				{
+					Debug.LogWarningFormat(
+						"Unable to add item {0} at {1} to index dictionary - entry already exists!",
+						_list[i].ToString(), i );
 				}
 			}
 		}
 
 #endregion
+
 	}
 }
