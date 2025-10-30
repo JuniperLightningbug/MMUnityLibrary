@@ -1,20 +1,21 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace MM
 {
-	/**
-	 *** Wrapper for 'SingletonComponent' initialisation data to attach a 'PropertyDrawer'
-	 * 
-	 * Unity doesn't support custom inspectors for generic typed classes - even for fixed type subclasses.
-	 * These wrappers & 'PropertyDrawer's allows us to avoid a generic type custom inspector altogether.
-	 */
+	
+	/// <summary>
+	/// Wrapper for 'SingletonComponent' initialisation data to attach a 'PropertyDrawer'.
+	/// The config list is displayed in the order of initialisation execution and not modifiable in the inspector.
+	/// <see cref="SingletonInitOrderProvider"/>
+	/// <see cref="SingletonComponent"/>
+	/// <see cref="SingletonHub"/>
+	/// </summary>
 	[System.Serializable]
 	public class SingletonComponentsInitInfo
 	{
-		// Exposed to inspector (in hard-coded order)
+		// Exposed to inspector (in hard-coded order - not as a default list type)
 		[SerializeField]
 		public SingletonComponentInitInfo[] _configs = Array.Empty<SingletonComponentInitInfo>();
 
@@ -47,8 +48,8 @@ namespace MM
 		public ESingletonComponentInitialisationMode _initialisationMode;
 
 		[SerializeField]
-		[Tooltip("Optionally assign default values from a ScriptableObject")]
-		public SingletonComponent _presetData;
+		[Tooltip("Optionally assign default value overrides from a serialised ScriptableObject")]
+		public SingletonComponent _presetConfig;
 		
 		// Derived fields
 		public Type _type;

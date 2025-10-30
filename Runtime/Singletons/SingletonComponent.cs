@@ -1,12 +1,12 @@
+using System;
 using UnityEngine;
 
 namespace MM
 {
-	/**
-	 *** ScriptableObject that behaves as a singleton at runtime with dependable initialisation behaviour and order
-	 *
-	 * See: 'SingletonHubBase'
-	 */
+	/// <summary>
+	/// `ScriptableObject` that behaves as a singleton at runtime with dependable initialisation behaviour and order
+	/// <see cref="SingletonHub"/>
+	/// </summary>
 	public abstract class SingletonComponent : ScriptableObject, IControlled
 	{
 		public enum ESingletonComponentLazyUpdateMode
@@ -18,24 +18,23 @@ namespace MM
 		
 #region SingletonHub accessor interface
 		
-		protected bool _bIsActive = false;
-		public bool BIsActive => _bIsActive;
-		public bool _bInitialised = false;
-
+		private bool _bInitialised = false;
+		public bool BInitialised => _bInitialised;
+		
 		public void Initialise( bool bForceReInitialise = false )
 		{
 			if( bForceReInitialise || !_bInitialised )
 			{
 				InitialiseInternal();
-				_bIsActive = BStartsActive;
 				_bInitialised = true;
+				
+				MonoBehaviourController.TryGetInstance?.Register( this );
 			}
 		}
 
 #endregion
 
 #region Virtual/Abstract
-		protected virtual bool BStartsActive => true;
 		public virtual ESingletonComponentLazyUpdateMode LazyUpdateMode => ESingletonComponentLazyUpdateMode.None;
 		
 		protected abstract void InitialiseInternal();
@@ -46,8 +45,20 @@ namespace MM
 
 #endregion
 
-		// TODO: Enable, disable - hook up to stonhub to turn off listeners
-		// TODO: Dispose stuff. StopListeners on stonhub and also remove as instanced ston from stonhub dict?
+#region ScriptableObject
+		private void OnDisable()
+		{
+			MonoBehaviourController.TryGetInstance?.Unregister( this );
+		}
 
+#endregion
+
+// TODO: If we don't want this to be an SO (we could still inject config data from an SO)
+// #region IDisposable
+// 		public void Dispose()
+// 		{
+// 			MonoBehaviourController.TryGetInstance?.Unregister( this );
+// 		}
+// #endregion
 	}
 }

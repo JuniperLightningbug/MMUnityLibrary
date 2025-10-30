@@ -4,13 +4,13 @@ using ObjectField = UnityEditor.Search.ObjectField;
 
 namespace MM
 {
-	[CustomPropertyDrawer( typeof( SingletonComponentInitInfo ), true )]
+	[CustomPropertyDrawer( typeof( SingletonComponentInitInfo ) )]
 	public class SingletonComponentInitInfo_PropertyDrawer : PropertyDrawer
 	{
 		const string kActiveToggleBindingPath = "_bActive";
 		const string kTypeBindingPath = "_typeDisplayString";
 		const string kInitialisationModeBindingPath = "_initialisationMode";
-		const string kPresetContentBindingPath = "_bPresetContent";
+		const string kPresetContentBindingPath = "_presetConfig";
 
 		private const string kContentElementName = "Content";
 
@@ -30,7 +30,6 @@ namespace MM
 			Label label = new Label()
 			{
 				bindingPath = kTypeBindingPath,
-				
 			};
 
 			Toggle toggle = new Toggle()
@@ -54,7 +53,7 @@ namespace MM
 			{
 				objectType = typeof( MM.SingletonComponent ),
 				bindingPath = kPresetContentBindingPath,
-				label = "Preset Content",
+				label = "Preset Config",
 			} );
 
 			root.Add( header );
