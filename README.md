@@ -49,9 +49,9 @@ Useful for systems where deterministic update order is required, and provides a 
 2. Optionally: Add `MonoBehaviourControlled` instance to a scene (ideally the first loaded scene of a project at least, but it can exist in any scene for testing). This is optional because the instance will otherwise be lazily initialised by any `MonoBehaviourControlled` initialisations.
 
 **Usage (MonoBehaviour):**
-1. Override `MonoBehaviourControlled` instead of `MonoBehaviour` for new `MonoBehaviour` classes.
-2. Implement any combination of `IControlledUpdate`, `IControlledLateUpdate`, `IControlledFixedUpdate` and `IControlledDebugUpdate` and add their callback implementations.
-3. Add the newly created `MonoBehaviourControlled` subclass to the project's `OverrideInitialisationOrder.ControlledUpdateOrder` override.
+1. Override `MonoBehaviourControlled` instead of `MonoBehaviour`.
+2. Implement any combination of `IControlledUpdate`, `IControlledLateUpdate`, `IControlledFixedUpdate` and `IControlledDebugUpdate`.
+3. Add the newly created `MonoBehaviourControlled` subclass to the project's `OverrideInitialisationOrder.ControlledUpdateOrder`.
 
 **Usage (custom object):**
 1. Implement `IControlled` and any combination of `IControlledUpdate`, `IControlledLateUpdate`, `IControlledFixedUpdate` and `IControlledDebugUpdate` and add their callback implementations.

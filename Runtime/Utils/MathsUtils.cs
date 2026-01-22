@@ -99,5 +99,23 @@ namespace MM
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static float Max( Vector3 v ) => Mathf.Max(v.x, v.y, v.z);
 #endregion
+
+#region Int Operations
+
+		/// <summary>
+		/// Loops a value such that it falls between 0 and length.
+		/// Similar to Mathf.Repeat, but without floating point casts.
+		/// Similar to %, but applies the same min->max repeat pattern for -ve numbers.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <param name="length">Must be > 0 for valid output</param>
+		/// <returns></returns>
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static int RepeatInt( int value, int length ) =>
+			value >= 0 ?
+				value % length :
+				(value % length + length) % length; // Extra % for situations where value = -i * length
+
+#endregion
 	}
 }
