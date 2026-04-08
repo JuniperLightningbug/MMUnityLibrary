@@ -19,7 +19,7 @@ namespace MM
 
 		    if( Application.isPlaying )
 		    {
-			    EditorGUILayout.LabelField( "[Runtime Data:]", EditorStyles.boldLabel );
+			    EditorGUILayout.LabelField( "[Runtime Payload:]", EditorStyles.boldLabel );
 			    
 			    // Reset default buttons
 			    if( GUILayout.Button( "Debug: Reset To Default Value" ) )

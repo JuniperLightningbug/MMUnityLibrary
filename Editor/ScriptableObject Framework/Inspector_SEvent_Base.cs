@@ -17,7 +17,7 @@ public class Inspector_SO_Event_Base : Editor
 
 		if( Application.isPlaying )
 		{
-			EditorGUILayout.LabelField( "[Runtime Data:]", EditorStyles.boldLabel );
+			EditorGUILayout.LabelField( "[Runtime Payload:]", EditorStyles.boldLabel );
 			
 			// Debug view of listeners
 			List<object> listeners = component.ForInspector_Listeners;
