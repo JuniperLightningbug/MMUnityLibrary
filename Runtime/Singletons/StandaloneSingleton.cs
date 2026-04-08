@@ -20,7 +20,7 @@ namespace MM
 		 * become problematic.
 		 */
 		
-		protected bool _bInitialised = false;
+		protected bool _bSingletonInitialised = false;
 		private static T s_instance;
 
 #region Interface
@@ -47,11 +47,11 @@ namespace MM
 
 #region Initialisation
 
-		private void Awake() { InitialiseSingleton(); }
+		private void Awake() { InitialiseSingletonInternal(); }
 
-		private void InitialiseSingleton()
+		private void InitialiseSingletonInternal()
 		{
-			if( _bInitialised ||
+			if( _bSingletonInitialised ||
 			    !ApplicationUtils.BIsPlaying )
 			{
 				return;
@@ -70,8 +70,8 @@ namespace MM
 					DontDestroyOnLoad( this );
 				}
 
-				Initialise();
-				_bInitialised = true;
+				InitialiseSingleton();
+				_bSingletonInitialised = true;
 			}
 		}
 
@@ -81,7 +81,7 @@ namespace MM
 
 		protected virtual bool BPersistent => false;
 
-		protected virtual void Initialise()
+		protected virtual void InitialiseSingleton()
 		{
 
 		}

@@ -33,7 +33,7 @@ namespace MM
 
 #region StandaloneSingleton
 
-		protected override void Initialise()
+		protected override void InitialiseSingleton()
 		{
 			_updateGroup = new ControlledUpdateGroup( s_updateOrder, typeof( IControlledUpdate ) );
 			_lateUpdateGroup = new ControlledUpdateGroup( s_updateOrder, typeof( IControlledLateUpdate ) );

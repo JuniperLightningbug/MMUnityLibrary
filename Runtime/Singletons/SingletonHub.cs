@@ -65,7 +65,7 @@ namespace MM
 
 		protected override bool BPersistent => true;
 
-		protected override void Initialise()
+		protected override void InitialiseSingleton()
 		{
 			CacheInitialisationInfos();
 			CreateSingletonComponentsOnAwake();
