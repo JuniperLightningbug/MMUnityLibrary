@@ -43,7 +43,7 @@ namespace MM
 		{
 			if( _bDebugLogInvokes )
 			{
-				Debug_LogInvoke( _defaultPayload, true );
+				Debug_LogInvoke( eventPayload, true );
 			}
 
 			InvokeInternal( eventPayload );
@@ -96,9 +96,9 @@ namespace MM
 			$"\nDefault payload: {_defaultPayload}";
 
 		private string Debug_DescribeInvoke( T eventPayload, bool bUsedCustomPayload ) =>
-			$"Invoked event: {name}" +
-			$"\n[{_listeners.Count}] Listeners: {string.Join( ", ", ListenerStrings )}" +
-			$"\nWith {(bUsedCustomPayload ? "[custom]" : "[default]")} payload:\n{(eventPayload == null ? "NULL" : eventPayload.ToString())}";
+			$"Invoked event: {name} with {(bUsedCustomPayload ? "[custom]" : "[default]")} payload:" +
+			$"\n{(eventPayload == null ? "NULL" : eventPayload.ToString())}" +
+			$"\n[{_listeners.Count}] Listeners: {string.Join( ", ", ListenerStrings )}";
 
 		[Conditional( "DEBUG" )]
 		private void Debug_LogInvoke( T eventPayload, bool bUsedCustomPayload ) =>
