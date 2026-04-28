@@ -28,7 +28,7 @@ namespace MM
 				InitialiseInternal();
 				_bInitialised = true;
 				
-				MonoBehaviourController.TryGetInstance?.Register( this );
+				MonoBehaviourController.Instance?.Register( this );
 			}
 		}
 
@@ -48,7 +48,7 @@ namespace MM
 #region ScriptableObject
 		private void OnDisable()
 		{
-			MonoBehaviourController.TryGetInstance?.Unregister( this );
+			MonoBehaviourController.Instance?.Unregister( this );
 		}
 
 #endregion

@@ -10,7 +10,7 @@ namespace MM
 	{
 		protected virtual void OnEnable()
 		{
-			MonoBehaviourController controller = MonoBehaviourController.GetOrMakeInstance;
+			MonoBehaviourController controller = MonoBehaviourController.GetOrMakeInstance();
 			if( controller )
 			{
 				controller.Register( this );
@@ -19,8 +19,7 @@ namespace MM
 
 		protected virtual void OnDisable()
 		{
-			MonoBehaviourController controller = MonoBehaviourController.TryGetInstance;
-			if( controller )
+			if( MonoBehaviourController.TryGetInstance( out MonoBehaviourController controller ) )
 			{
 				controller.Unregister( this );
 			}

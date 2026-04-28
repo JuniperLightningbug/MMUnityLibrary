@@ -25,23 +25,22 @@ namespace MM
 
 #region Interface
 
-		public static T TryGetInstance => s_instance;
+		public static T Instance => s_instance;
+		public static T GetInstance( bool bCreateIfNull = false ) => bCreateIfNull ? GetOrMakeInstance() : s_instance;
 
-		public static T GetOrMakeInstance
+		public static bool TryGetInstance( out T outInstance ) => outInstance = s_instance;
+
+		public static T GetOrMakeInstance()
 		{
-			get
+			if( !s_instance && ApplicationUtils.BIsPlaying )
 			{
-				if( !s_instance && ApplicationUtils.BIsPlaying )
-				{
-					GameObject obj = new GameObject( $"{typeof( T ).FullName} [runtime-generated]", typeof( T ) );
-					s_instance = obj.GetComponent<T>();
-				}
-
-				return s_instance;
+				GameObject obj = new GameObject( $"{typeof( T ).FullName} [runtime-generated]", typeof( T ) );
+				s_instance = obj.GetComponent<T>();
 			}
+
+			return s_instance;
 		}
 
-		public static T GetInstance( bool bCreateIfNull = true ) => bCreateIfNull ? GetOrMakeInstance : TryGetInstance;
 
 #endregion
 
