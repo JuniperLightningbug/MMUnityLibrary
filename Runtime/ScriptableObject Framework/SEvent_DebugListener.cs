@@ -52,9 +52,13 @@ namespace MM
 
 		private void StartListening( SEvent_Base eventBase )
 		{
-			if( eventBase != null )
+			if( eventBase )
 			{
-				if( eventBase.PayloadType != null )
+				if(eventBase is SEvent untypedEvent)
+				{
+					untypedEvent.StartListening( OnInvokeUntyped );
+				}
+				else if( eventBase.PayloadType != null )
 				{
 					MethodInfo method = GetType().GetMethod(
 						"TryStartListeningTyped",
@@ -68,9 +72,13 @@ namespace MM
 
 		private void StopListening( SEvent_Base eventBase )
 		{
-			if( eventBase != null )
+			if( eventBase )
 			{
-				if( eventBase.PayloadType != null )
+				if(eventBase is SEvent untypedEvent)
+				{
+					untypedEvent.StopListening( OnInvokeUntyped );
+				}
+				else if( eventBase.PayloadType != null )
 				{
 					MethodInfo method = GetType().GetMethod(
 						"TryStopListeningTyped",
@@ -113,6 +121,9 @@ namespace MM
 
 		protected virtual void OnInvokeTyped<T>( SEvent_Base eventBase, T eventPayload ) =>
 			Debug.Log( $"Received event: {eventBase}\nWith payload: {eventPayload.ToString()}" );
+		
+		protected virtual void OnInvokeUntyped( SEvent_Base eventBase ) =>
+			Debug.Log( $"Received event: {eventBase}" );
 
 	}
 }
