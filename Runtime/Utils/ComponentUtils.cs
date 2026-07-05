@@ -24,7 +24,7 @@ namespace MM
 
 		public static void DestroyPlaymodeSafe( Object inObject )
 		{
-			if( !inObject )
+			if( !inObject || ApplicationUtils.BIsQuitting )
 			{
 				return;
 			}
@@ -41,7 +41,6 @@ namespace MM
 #else
 			Object.Destroy( inObject );
 #endif
-			inObject = null;
 		}
 
 		/**
