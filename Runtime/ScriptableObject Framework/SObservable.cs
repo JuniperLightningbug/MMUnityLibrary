@@ -17,38 +17,80 @@ namespace MM
 	/// </summary>
 	public abstract class SObservable<T> : SValue<T>, IForInspector_ObservableValue
 	{
+		// Mainly for debugging tools - sometimes we want to force the callbacks to invoke, or suppress them
+		public enum ECallbackMode
+		{
+			Auto, // Execute callbacks if the new value differs from the current value
+			AlwaysInvoke,
+			Suppress,
+		}
+
 		// Value-type change callbacks and object-type reassignments (automatic)
 		private readonly IndexedHashSet<Action<T, T>> _onPreChangedListeners = new IndexedHashSet<Action<T, T>>();
 		private readonly IndexedHashSet<Action<T, T>> _onPostChangedListeners = new IndexedHashSet<Action<T, T>>();
-		
-#region Interface
-		public void SetSkipCallbacks( T inValue ) => _value = inValue;
-		public override void Set( T inValue ) => Set( inValue, false );
-		public void Set( T inValue, bool bNotifyIfUnchanged )
-		{
-			if( !bNotifyIfUnchanged &&
-			    EqualityComparer<T>.Default.Equals( _value, inValue ) )
-			{
-				return;
-			}
+		private readonly IndexedHashSet<Action<SObservable<T>>> _onChangedListeners = new IndexedHashSet<Action<SObservable<T>>>();
 
-			InvokePreChange( _value, inValue );
-			T previousValue = _value;
-			_value = inValue;
-			InvokePostChange( previousValue, _value );
+#region Interface
+
+		public void SetSkipCallbacks( T inValue ) => _value = inValue;
+		public override void Set( T inValue ) => Set( inValue, ECallbackMode.Auto );
+
+		public void Set( T inValue, ECallbackMode callbackMode )
+		{
+			bool bInvokeCallbacks = callbackMode switch
+			{
+				ECallbackMode.Auto => !EqualityComparer<T>.Default.Equals( _value, inValue ),
+				ECallbackMode.AlwaysInvoke => true,
+				ECallbackMode.Suppress => false,
+				_ => throw new ArgumentOutOfRangeException( nameof( callbackMode ), callbackMode, null )
+			};
+			
+			if( bInvokeCallbacks )
+			{
+				T previousValue = _value;
+				InvokeOnPreChangedCallbacksInternal( previousValue, inValue );
+				_value = inValue;
+				InvokeOnChangedCallbacksInternal();
+				InvokeOnPostChangedCallbacksInternal( previousValue, _value );
+			}
+			else
+			{
+				_value = inValue;
+			}
 		}
 
+		public void StartListening( Action<SObservable<T>> listener ) => _onChangedListeners?.Add( listener );
+		public void StopListening( Action<SObservable<T>> listener ) => _onChangedListeners?.Remove( listener );
 		public void StartListeningPreChange( Action<T, T> listener ) => _onPreChangedListeners?.Add( listener );
 		public void StopListeningPreChange( Action<T, T> listener ) => _onPreChangedListeners?.Remove( listener );
 		public void StartListeningPostChange( Action<T, T> listener ) => _onPostChangedListeners?.Add( listener );
-		public void StopListeningPostChange( Action<T, T> listener) => _onPostChangedListeners?.Remove( listener );
-		
-		public void DirectInvokePreChange() => InvokePreChange( _value, _value );
-		public void DirectInvokePostChange() => InvokePostChange( _value, _value );
+		public void StopListeningPostChange( Action<T, T> listener ) => _onPostChangedListeners?.Remove( listener );
+
+		public void BroadcastChange()
+		{
+			InvokeOnPreChangedCallbacksInternal( _value, _value );
+			InvokeOnChangedCallbacksInternal();
+			InvokeOnPostChangedCallbacksInternal(_value, _value );
+		}
+		public void BroadcastPreChange() => InvokeOnPreChangedCallbacksInternal( _value, _value );
+		public void BroadcastPostChange() => InvokeOnPostChangedCallbacksInternal( _value, _value );
+
 #endregion
 
 #region Automatic Callbacks
-		private void InvokePreChange( T currentValue, T nextValue )
+
+		private void InvokeOnChangedCallbacksInternal()
+		{
+			if( _onChangedListeners != null )
+			{
+				for( int i = _onChangedListeners.Count - 1; i >= 0; --i )
+				{
+					_onChangedListeners[i]?.Invoke( this );
+				}
+			}
+		}
+		
+		private void InvokeOnPreChangedCallbacksInternal( T currentValue, T nextValue )
 		{
 			if( _onPreChangedListeners != null )
 			{
@@ -59,7 +101,7 @@ namespace MM
 			}
 		}
 
-		private void InvokePostChange( T previousValue, T currentValue )
+		private void InvokeOnPostChangedCallbacksInternal( T previousValue, T currentValue )
 		{
 			if( _onPostChangedListeners != null )
 			{
@@ -69,19 +111,26 @@ namespace MM
 				}
 			}
 		}
+
 #endregion
 
 #region SValue<T>
+
 		protected override void ResetInternal()
 		{
 			base.ResetInternal();
+			_onChangedListeners?.Clear();
 			_onPreChangedListeners?.Clear();
 			_onPostChangedListeners?.Clear();
 		}
+
 #endregion
 
 #region IForInspector_ObservableValue
 
+		public List<object> ForInspector_GetOnChangedListeners() =>
+			_onChangedListeners.GetList().Select( listener => listener.Target ).ToList();
+		
 		public List<object> ForInspector_GetOnPreChangedListeners() =>
 			_onPreChangedListeners.GetList().Select( listener => listener.Target ).ToList();
 
@@ -92,13 +141,13 @@ namespace MM
 		 * If the value has been set in the inspector, but we want to simulate the change, try to undo it and
 		 * then process it through the usual runtime pipeline to trigger the relevant callbacks
 		 */
-		
+
 		public void ForInspector_SimulateCallbacks_AsCurrentValue()
 		{
 #if UNITY_EDITOR
 			if( EditorApplication.isPlaying )
 			{
-				Set( _value, true );
+				BroadcastChange();
 			}
 #endif
 		}
@@ -125,31 +174,18 @@ namespace MM
 #endif
 		}
 
-		/**
-		 * If the value has been set in the inspector, but we want to simulate the change, try to undo it and
-		 * then process it through the usual runtime pipeline to trigger the relevant callbacks
-		 */
-		public void ForInspector_SimulateOnChangedCallbacks()
-		{
-#if UNITY_EDITOR
-			if( Application.isPlaying )
-			{
-				Set( _value );
-			}
-#endif
-		}
 #endregion
-
 	}
-	
+
 	/// <summary>
 	/// Interface helps serialize data for inspector of generic typed SValue subclass
 	/// </summary>
 	public interface IForInspector_ObservableValue
 	{
+		public List<object> ForInspector_GetOnChangedListeners();
 		public List<object> ForInspector_GetOnPreChangedListeners();
 		public List<object> ForInspector_GetOnPostChangedListeners();
-		
+
 		public void ForInspector_SimulateCallbacks_AsCurrentValue();
 		public void ForInspector_SimulateCallbacks_CurrentToDefault();
 		public void ForInspector_SimulateCallbacks_DefaultToCurrent();

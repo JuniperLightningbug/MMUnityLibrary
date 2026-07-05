@@ -55,21 +55,23 @@ namespace MM
 					    }
 				    }
 				    
+				    EditorGUILayout.LabelField( "Listeners:" );
+				    ShowListenerObjects( iObservable.ForInspector_GetOnChangedListeners() );
 				    EditorGUILayout.LabelField( "Pre-Changed Listeners:" );
 				    ShowListenerObjects( iObservable.ForInspector_GetOnPreChangedListeners() );
 				    EditorGUILayout.LabelField( "Post-Changed Listeners:" );
 				    ShowListenerObjects( iObservable.ForInspector_GetOnPostChangedListeners() );
 
 				    // Debug invokers
-				    if( GUILayout.Button( "Debug Simulate Changed: As Current (Runtime)" ) )
+				    if( GUILayout.Button( "(Runtime) Invoke OnChanged (Runtime)" ) )
 				    {
 					    iObservable.ForInspector_SimulateCallbacks_AsCurrentValue();
 				    }
-				    if( GUILayout.Button( "Debug Simulate Changed: Current -> Default (Runtime)" ) )
+				    if( GUILayout.Button( "(Runtime) Simulate OnChanged -- [From:] Current  [To:] Default " ) )
 				    {
 					    iObservable.ForInspector_SimulateCallbacks_CurrentToDefault();
 				    }
-				    if( GUILayout.Button( "Debug Simulate Changed: Default -> Current (Runtime)" ) )
+				    if( GUILayout.Button( "(Runtime) Simulate OnChanged -- [From:] Default  [To:] Current" ) )
 				    {
 					    iObservable.ForInspector_SimulateCallbacks_DefaultToCurrent();
 				    }

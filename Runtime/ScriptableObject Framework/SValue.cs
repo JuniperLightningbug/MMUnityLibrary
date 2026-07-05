@@ -25,16 +25,12 @@ namespace MM
 	/// </summary>
 	public abstract class SValue_Base : ScriptableObject
 	{
-		[SerializeField] protected bool _bApplyDefaultOnReset = true;
-
 		public abstract void ResetToDefaultValue();
 
+		[ContextMenu( "Reset to Default Value" )]
 		protected virtual void ResetInternal()
 		{
-			if( _bApplyDefaultOnReset )
-			{
-				ResetToDefaultValue();
-			}
+			ResetToDefaultValue();
 		}
 		
 		public abstract void ForInspector_StoreValueAsDefault();
@@ -42,7 +38,6 @@ namespace MM
 #region Unity Callbacks
 		protected virtual void OnDisable() => ResetInternal();
 		protected virtual void OnEnable() => ResetInternal();
-		protected virtual void Reset() => ResetInternal();
 #endregion
 	}
 }
