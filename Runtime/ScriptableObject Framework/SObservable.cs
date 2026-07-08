@@ -10,12 +10,22 @@ using UnityEditor;
 namespace MM
 {
 	/// <summary>
+	/// Interface for inspector assignment of generic typed SObservables
+	/// </summary>
+	public interface IObservable
+	{
+		public string DisplayString();
+		public void StartListening( Action listener );
+		public void StopListening( Action listener );
+	}
+	
+	/// <summary>
 	/// Variant of <see cref="SValue{T}"/> with observable pre- and post-change callbacks.
 	/// Callbacks are automatic for atomic value types and composite/object type reassignments.
 	/// If composite/object types expose their content for modifications by external classes, then those classes are
 	/// responsible for posting the callbacks manually (see 'DirectInvokePreChange' and 'DirectInvokePostChange').
 	/// </summary>
-	public abstract class SObservable<T> : SValue<T>, IForInspector_ObservableValue
+	public abstract class SObservable<T> : SValue<T>, IForInspector_ObservableValue, IObservable
 	{
 		// Mainly for debugging tools - sometimes we want to force the callbacks to invoke, or suppress them
 		public enum ECallbackMode
@@ -26,12 +36,11 @@ namespace MM
 		}
 
 		// Value-type change callbacks and object-type reassignments (automatic)
-		private readonly IndexedHashSet<Action<T, T>> _onPreChangedListeners = new IndexedHashSet<Action<T, T>>();
-		private readonly IndexedHashSet<Action<T, T>> _onPostChangedListeners = new IndexedHashSet<Action<T, T>>();
-		private readonly IndexedHashSet<Action<SObservable<T>>> _onChangedListeners = new IndexedHashSet<Action<SObservable<T>>>();
+		private readonly IndexedHashSet<Action<SObservable<T>, T>> _onPreChangedListeners = new IndexedHashSet<Action<SObservable<T>, T>>();
+		private readonly IndexedHashSet<Action<SObservable<T>, T>> _onPostChangedListeners = new IndexedHashSet<Action<SObservable<T>, T>>();
+		private readonly IndexedHashSet<Action> _onChangedListeners = new IndexedHashSet<Action>();
 
 #region Interface
-
 		public void SetSkipCallbacks( T inValue ) => _value = inValue;
 		public override void Set( T inValue ) => Set( inValue, ECallbackMode.Auto );
 
@@ -47,71 +56,72 @@ namespace MM
 			
 			if( bInvokeCallbacks )
 			{
+				InvokeOnPreChangedCallbacksInternal( inValue );
 				T previousValue = _value;
-				InvokeOnPreChangedCallbacksInternal( previousValue, inValue );
 				_value = inValue;
 				InvokeOnChangedCallbacksInternal();
-				InvokeOnPostChangedCallbacksInternal( previousValue, _value );
+				InvokeOnPostChangedCallbacksInternal( previousValue );
 			}
 			else
 			{
 				_value = inValue;
 			}
 		}
-
-		public void StartListening( Action<SObservable<T>> listener ) => _onChangedListeners?.Add( listener );
-		public void StopListening( Action<SObservable<T>> listener ) => _onChangedListeners?.Remove( listener );
-		public void StartListeningPreChange( Action<T, T> listener ) => _onPreChangedListeners?.Add( listener );
-		public void StopListeningPreChange( Action<T, T> listener ) => _onPreChangedListeners?.Remove( listener );
-		public void StartListeningPostChange( Action<T, T> listener ) => _onPostChangedListeners?.Add( listener );
-		public void StopListeningPostChange( Action<T, T> listener ) => _onPostChangedListeners?.Remove( listener );
+		
+		public void StartListeningPreChange( Action<SObservable<T>, T> listener ) => _onPreChangedListeners?.Add( listener );
+		public void StopListeningPreChange( Action<SObservable<T>, T> listener ) => _onPreChangedListeners?.Remove( listener );
+		public void StartListeningPostChange( Action<SObservable<T>, T> listener ) => _onPostChangedListeners?.Add( listener );
+		public void StopListeningPostChange( Action<SObservable<T>, T> listener ) => _onPostChangedListeners?.Remove( listener );
 
 		public void BroadcastChange()
 		{
-			InvokeOnPreChangedCallbacksInternal( _value, _value );
+			InvokeOnPreChangedCallbacksInternal( _value );
 			InvokeOnChangedCallbacksInternal();
-			InvokeOnPostChangedCallbacksInternal(_value, _value );
+			InvokeOnPostChangedCallbacksInternal( _value );
 		}
-		public void BroadcastPreChange() => InvokeOnPreChangedCallbacksInternal( _value, _value );
-		public void BroadcastPostChange() => InvokeOnPostChangedCallbacksInternal( _value, _value );
-
+		public void BroadcastPreChange() => InvokeOnPreChangedCallbacksInternal( _value );
+		public void BroadcastPostChange() => InvokeOnPostChangedCallbacksInternal( _value );
+#endregion
+		
+#region IObservable
+		public virtual string DisplayString() => _value.ToString();
+		public void StartListening( Action listener ) => _onChangedListeners?.Add( listener );
+		public void StopListening( Action listener ) => _onChangedListeners?.Remove( listener );
 #endregion
 
 #region Automatic Callbacks
-
 		private void InvokeOnChangedCallbacksInternal()
 		{
 			if( _onChangedListeners != null )
 			{
 				for( int i = _onChangedListeners.Count - 1; i >= 0; --i )
 				{
-					_onChangedListeners[i]?.Invoke( this );
+					_onChangedListeners[i]?.Invoke();
 				}
 			}
 		}
 		
-		private void InvokeOnPreChangedCallbacksInternal( T currentValue, T nextValue )
+		private void InvokeOnPreChangedCallbacksInternal( T nextValue )
 		{
 			if( _onPreChangedListeners != null )
 			{
 				for( int i = _onPreChangedListeners.Count - 1; i >= 0; --i )
 				{
-					_onPreChangedListeners[i]?.Invoke( currentValue, nextValue );
+					_onPreChangedListeners[i]?.Invoke( this, nextValue );
 				}
 			}
 		}
 
-		private void InvokeOnPostChangedCallbacksInternal( T previousValue, T currentValue )
+		private void InvokeOnPostChangedCallbacksInternal( T previousValue )
 		{
 			if( _onPostChangedListeners != null )
 			{
 				for( int i = _onPostChangedListeners.Count - 1; i >= 0; --i )
 				{
-					_onPostChangedListeners[i]?.Invoke( previousValue, currentValue );
+					_onPostChangedListeners[i]?.Invoke( this, previousValue );
 				}
 			}
 		}
-
 #endregion
 
 #region SValue<T>
