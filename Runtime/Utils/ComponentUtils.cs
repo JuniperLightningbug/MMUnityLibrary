@@ -36,7 +36,8 @@ namespace MM
 			}
 			else
 			{
-				Object.DestroyImmediate( inObject );
+				Undo.RecordObject( inObject, "Destroy Object (Edit-Time)" );
+				Undo.DestroyObjectImmediate( inObject );
 			}
 #else
 			Object.Destroy( inObject );

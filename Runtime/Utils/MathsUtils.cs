@@ -97,24 +97,75 @@ namespace MM
 			Approximately( a.m33, b.m33, kFloatEpsilon );
 		
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static bool PositiveNonZero( float a, float epsilon = kFloatEpsilon ) =>
+			a > epsilon;
+		
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static float Max( Vector3 v ) => Mathf.Max(v.x, v.y, v.z);
+		
 #endregion
 
 #region Int Operations
 
 		/// <summary>
-		/// Loops a value such that it falls between 0 and length.
-		/// Similar to Mathf.Repeat, but without floating point casts.
-		/// Similar to %, but applies the same min->max repeat pattern for -ve numbers.
+		/// Int variant of Mathf.Repeat
+		/// 
+		/// Similar to int modulo, but repeats input -ve numbers on a positive output range.
+		/// Default % behaviour: -1 % 4 = -1; -5 % 4 = -1
+		/// RepeatInt behaviour: -1 "%" 4 = 3; -5 "%" 4 = 3
 		/// </summary>
 		/// <param name="value"></param>
-		/// <param name="length">Must be > 0 for valid output</param>
-		/// <returns></returns>
+		/// <param name="length">Exclusive upper bound; Must be > 0</param>
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static int RepeatInt( int value, int length ) =>
-			value >= 0 ?
-				value % length :
-				(value % length + length) % length; // Extra % for situations where value = -i * length
+		public static int RepeatInt( int value, int length )
+		{
+			int remainder = value % length;
+			return remainder < 0 ? remainder + length : remainder;
+		}
+
+		/// <summary>
+		/// Variant of Mathf.Repeat with bounded range [lower, upper)
+		/// </summary>
+		/// <param name="value"></param>
+		/// <param name="min">Inclusive lower bound</param>
+		/// <param name="max">Exclusive upper bound; Must be > 'min'</param>
+		public static float Repeat( float value, float min, float max ) =>
+			min + Mathf.Repeat(value - min, max - min);
+		
+		/// <summary>
+		/// Int variant of Mathf.Repeat with bounded range [lower, upper)
+		/// </summary>
+		/// <param name="value"></param>
+		/// <param name="min">Inclusive lower bound</param>
+		/// <param name="max">Exclusive upper bound; Must be > 'min'</param>
+		public static int Repeat( int value, int min, int max ) =>
+			min + RepeatInt(value - min, max - min);
+		
+		/// <summary>
+		/// Floor-division for ints, rounding downwards towards negative infinity
+		/// </summary>
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static int DivideFloor( int value, int divisor ) =>
+			(value % divisor != 0) &&		// Non-zero remainder
+			(value < 0 != divisor < 0) ?	// -ve quotient
+				value / divisor - 1 :		// Round -ve values down
+				value / divisor;
+
+		/// <summary>
+		/// Ceil-division for ints, rounding upwards towards positive infinity without float casts
+		/// </summary>
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static int DivideCeil( int value, int divisor ) =>
+			(value % divisor != 0) &&		// Non-zero remainder
+			(value < 0 == divisor < 0) ?	// +ve quotient
+				value / divisor + 1 :		// Round +ve values up
+				value / divisor;
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static float Overflow( float value, float min, float max ) => value - Mathf.Clamp( value, min, max );
+		
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static float Overflow01( float value ) => value - Mathf.Clamp01( value );
 
 #endregion
 	}
