@@ -6,10 +6,8 @@ namespace MM
 		public const string kEventNamePrefix = "SEvent_";
 		public const string kEventMenuPrefix = "SEvent/";
 		
-		public const string kValueNamePrefix = "SValue_";
-		public const string kValueMenuPrefix = "SValue/";
-		public const string kObservableValueNamePrefix = "SObservable_";
-		public const string kObservableValueMenuPrefix = "SObservable/";
+		public const string kObservableNamePrefix = "SObservable_";
+		public const string kObservableMenuPrefix = "SObservable/";
 		
 		// Default menu orders
 		// (Note: separation of 100 adds a dividing line)

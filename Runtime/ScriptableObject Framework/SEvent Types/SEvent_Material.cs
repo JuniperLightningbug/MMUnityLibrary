@@ -6,5 +6,5 @@ namespace MM
 		fileName = ScriptableObjectUtils.kEventNamePrefix + "Material",
 		menuName = ScriptableObjectUtils.kEventMenuPrefix + "Material",
 		order = ScriptableObjectUtils.kMenuOrder_Asset )]
-	public class SEvent_Material : SEvent_Typed<Material> {}
+	public class SEvent_Material : SEvent<Material> {}
 }

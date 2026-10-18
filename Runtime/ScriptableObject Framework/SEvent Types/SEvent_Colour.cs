@@ -6,5 +6,5 @@ namespace MM
 		fileName = ScriptableObjectUtils.kEventNamePrefix + "Colour",
 		menuName = ScriptableObjectUtils.kEventMenuPrefix + "Colour",
 		order = ScriptableObjectUtils.kMenuOrder_UnityComposite )]
-	public class SEvent_Colour : SEvent_Typed<Color> {}
+	public class SEvent_Colour : SEvent<Color> {}
 }

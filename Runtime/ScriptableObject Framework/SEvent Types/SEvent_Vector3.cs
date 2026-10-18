@@ -6,5 +6,5 @@ namespace MM
 		fileName = ScriptableObjectUtils.kEventNamePrefix + "Vector3",
 		menuName = ScriptableObjectUtils.kEventMenuPrefix + "Vector3",
 		order = ScriptableObjectUtils.kMenuOrder_UnityComposite )]
-	public class SEvent_Vector3 : SEvent_Typed<Vector3> {}
+	public class SEvent_Vector3 : SEvent<Vector3> {}
 }

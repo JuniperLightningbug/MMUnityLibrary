@@ -1,7 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -9,195 +8,115 @@ using UnityEditor;
 
 namespace MM
 {
-	/// <summary>
-	/// Interface for inspector assignment of generic typed SObservables
-	/// </summary>
-	public interface IObservable
+	/**
+	 * Holds a sharable value (Observable), with a default value from edit-time.
+	 * Used for loading values from assets / asset paths, and reducing scene dependencies / race conditions.
+	 */
+	public abstract class SObservable<T> : SObservableBase
 	{
-		public string DisplayString();
-		public void StartListening( Action listener );
-		public void StopListening( Action listener );
-	}
-	
-	/// <summary>
-	/// Variant of <see cref="SValue{T}"/> with observable pre- and post-change callbacks.
-	/// Callbacks are automatic for atomic value types and composite/object type reassignments.
-	/// If composite/object types expose their content for modifications by external classes, then those classes are
-	/// responsible for posting the callbacks manually (see 'DirectInvokePreChange' and 'DirectInvokePostChange').
-	/// </summary>
-	public abstract class SObservable<T> : SValue<T>, IForInspector_ObservableValue, IObservable
-	{
-		// Mainly for debugging tools - sometimes we want to force the callbacks to invoke, or suppress them
-		public enum ECallbackMode
-		{
-			Auto, // Execute callbacks if the new value differs from the current value
-			AlwaysInvoke,
-			Suppress,
-		}
+		[SerializeField] protected Observable<T> _current;
+		public Observable<T> Current => _current;
+		public T _defaultValue;
 
-		// Value-type change callbacks and object-type reassignments (automatic)
-		private readonly IndexedHashSet<Action<SObservable<T>, T>> _onPreChangedListeners = new IndexedHashSet<Action<SObservable<T>, T>>();
-		private readonly IndexedHashSet<Action<SObservable<T>, T>> _onPostChangedListeners = new IndexedHashSet<Action<SObservable<T>, T>>();
-		private readonly IndexedHashSet<Action> _onChangedListeners = new IndexedHashSet<Action>();
+		public void ResetToDefault( Object from = null ) => Current.Set( _defaultValue, from );
 
-#region Interface
-		public void SetSkipCallbacks( T inValue ) => _value = inValue;
-		public override void Set( T inValue ) => Set( inValue, ECallbackMode.Auto );
+		public void ForceResetToDefault() => (_current ??= new Observable<T>()).SetWithAuthority( _defaultValue );
 
-		public void Set( T inValue, ECallbackMode callbackMode )
-		{
-			bool bInvokeCallbacks = callbackMode switch
-			{
-				ECallbackMode.Auto => !EqualityComparer<T>.Default.Equals( _value, inValue ),
-				ECallbackMode.AlwaysInvoke => true,
-				ECallbackMode.Suppress => false,
-				_ => throw new ArgumentOutOfRangeException( nameof( callbackMode ), callbackMode, null )
-			};
-			
-			if( bInvokeCallbacks )
-			{
-				InvokeOnPreChangedCallbacksInternal( inValue );
-				T previousValue = _value;
-				_value = inValue;
-				InvokeOnChangedCallbacksInternal();
-				InvokeOnPostChangedCallbacksInternal( previousValue );
-			}
-			else
-			{
-				_value = inValue;
-			}
-		}
-		
-		public void StartListeningPreChange( Action<SObservable<T>, T> listener ) => _onPreChangedListeners?.Add( listener );
-		public void StopListeningPreChange( Action<SObservable<T>, T> listener ) => _onPreChangedListeners?.Remove( listener );
-		public void StartListeningPostChange( Action<SObservable<T>, T> listener ) => _onPostChangedListeners?.Add( listener );
-		public void StopListeningPostChange( Action<SObservable<T>, T> listener ) => _onPostChangedListeners?.Remove( listener );
+#region Observable Routing
 
-		public void BroadcastChange()
-		{
-			InvokeOnPreChangedCallbacksInternal( _value );
-			InvokeOnChangedCallbacksInternal();
-			InvokeOnPostChangedCallbacksInternal( _value );
-		}
-		public void BroadcastPreChange() => InvokeOnPreChangedCallbacksInternal( _value );
-		public void BroadcastPostChange() => InvokeOnPostChangedCallbacksInternal( _value );
-#endregion
-		
-#region IObservable
-		public virtual string DisplayString() => _value.ToString();
-		public void StartListening( Action listener ) => _onChangedListeners?.Add( listener );
-		public void StopListening( Action listener ) => _onChangedListeners?.Remove( listener );
+		// Access (might need prior validation - T can be null)
+		public T Get() => Current.Get();
+
+		// Ownership Guard
+		public Object Owner => Current.Guard.Owner;
+		public bool BLocked => Current.Guard.BLocked;
+		public bool HasWriteAccess( Object from ) => Current.Guard.HasWriteAccess( from );
+		public void Lock( Object owner, bool bForce = false ) => Current.Guard.Lock( owner, bForce );
+		public void Release( Object owner, bool bForce = false ) => Current.Guard.Release( owner, bForce );
+
+
+		// Modify
+		public void ClearAllListeners() => Current?.ClearAllListeners();
+		public bool HasChangedSinceCallbacks() => Current.HasChangedSinceCallbacks();
+
+		public void Set(
+			T inValue,
+			Object from = null,
+			ObservableBase.ECallbackMode callbackMode = ObservableBase.ECallbackMode.Auto ) =>
+			Current?.Set( inValue, from, callbackMode );
+
+		public void SetWithAuthority(
+			T inValue,
+			ObservableBase.ECallbackMode callbackMode = ObservableBase.ECallbackMode.Auto ) =>
+			Current?.SetWithAuthority( inValue, callbackMode );
+
+		public void InvokeOnChangedWithAuthority() => Current?.InvokeOnChangedWithAuthority();
+		public void InvokeIfChangedWithAuthority() => Current?.InvokeIfChangedWithAuthority();
+		public void InvokeOnChanged( Object from = null ) => Current?.InvokeOnChanged( from );
+		public void InvokeIfChanged( Object from = null ) => Current?.InvokeIfChanged( from );
+
+		// Observe
+		public void StartListening( Action<T, T> callback ) => Current?.StartListening( callback );
+		public void StartListening( Action callback ) => Current?.StartListening( callback );
+		public void StopListening( Action<T, T> callback ) => Current?.StopListening( callback );
+		public void StopListening( Action callback ) => Current?.StopListening( callback );
+
 #endregion
 
-#region Automatic Callbacks
-		private void InvokeOnChangedCallbacksInternal()
+#region Unity Callbacks
+
+		protected virtual void OnDisable()
 		{
-			if( _onChangedListeners != null )
-			{
-				for( int i = _onChangedListeners.Count - 1; i >= 0; --i )
-				{
-					_onChangedListeners[i]?.Invoke();
-				}
-			}
-		}
-		
-		private void InvokeOnPreChangedCallbacksInternal( T nextValue )
-		{
-			if( _onPreChangedListeners != null )
-			{
-				for( int i = _onPreChangedListeners.Count - 1; i >= 0; --i )
-				{
-					_onPreChangedListeners[i]?.Invoke( this, nextValue );
-				}
-			}
+			// Prevent invokes from other objects holding a stale reference
+			Current?.ClearAllListeners();
+			_current = null;
 		}
 
-		private void InvokeOnPostChangedCallbacksInternal( T previousValue )
+		protected virtual void OnEnable()
 		{
-			if( _onPostChangedListeners != null )
-			{
-				for( int i = _onPostChangedListeners.Count - 1; i >= 0; --i )
-				{
-					_onPostChangedListeners[i]?.Invoke( this, previousValue );
-				}
-			}
-		}
-#endregion
+			ForceResetToDefault();
 
-#region SValue<T>
-
-		protected override void ResetInternal()
-		{
-			base.ResetInternal();
-			_onChangedListeners?.Clear();
-			_onPreChangedListeners?.Clear();
-			_onPostChangedListeners?.Clear();
+			// No listeners yet - don't flag this change for callbacks
+			_current?.SkipCallbacks();
 		}
 
 #endregion
 
-#region IForInspector_ObservableValue
+#region SObservableBase
 
-		public List<object> ForInspector_GetOnChangedListeners() =>
-			_onChangedListeners.GetList().Select( listener => listener.Target ).ToList();
-		
-		public List<object> ForInspector_GetOnPreChangedListeners() =>
-			_onPreChangedListeners.GetList().Select( listener => listener.Target ).ToList();
+		// Override this for type-specific views (see 'SObservableTMP')
+		public override string DisplayValue => _current?.ToString() ?? string.Empty;
 
-		public List<object> ForInspector_GetOnPostChangedListeners() =>
-			_onPostChangedListeners.GetList().Select( listener => listener.Target ).ToList();
+		public override void StartListeningNotify( Action listener ) =>
+			_current?.StartListeningNotify( listener );
 
-		/*
-		 * If the value has been set in the inspector, but we want to simulate the change, try to undo it and
-		 * then process it through the usual runtime pipeline to trigger the relevant callbacks
-		 */
+		public override void StopListeningNotify( Action listener ) =>
+			_current?.StopListeningNotify( listener );
 
-		public void ForInspector_SimulateCallbacks_AsCurrentValue()
-		{
 #if UNITY_EDITOR
-			if( EditorApplication.isPlaying )
-			{
-				BroadcastChange();
-			}
-#endif
-		}
-
-		public void ForInspector_SimulateCallbacks_CurrentToDefault()
+		public override void DebugStoreCurrentValueAsDefault()
 		{
-#if UNITY_EDITOR
-			if( EditorApplication.isPlaying )
-			{
-				Set( _defaultValue );
-			}
-#endif
+			Undo.RecordObject( this, "SValue: Store Current Value As Default" );
+			_defaultValue = Current.Get();
 		}
-
-		public void ForInspector_SimulateCallbacks_DefaultToCurrent()
-		{
-#if UNITY_EDITOR
-			if( EditorApplication.isPlaying )
-			{
-				T toValue = _value;
-				SetSkipCallbacks( _defaultValue );
-				Set( toValue );
-			}
 #endif
-		}
 
 #endregion
+
 	}
 
-	/// <summary>
-	/// Interface helps serialize data for inspector of generic typed SValue subclass
-	/// </summary>
-	public interface IForInspector_ObservableValue
+	public abstract class SObservableBase : ScriptableObject
 	{
-		public List<object> ForInspector_GetOnChangedListeners();
-		public List<object> ForInspector_GetOnPreChangedListeners();
-		public List<object> ForInspector_GetOnPostChangedListeners();
+#if UNITY_EDITOR
+		public abstract void DebugStoreCurrentValueAsDefault();
+#endif
 
-		public void ForInspector_SimulateCallbacks_AsCurrentValue();
-		public void ForInspector_SimulateCallbacks_CurrentToDefault();
-		public void ForInspector_SimulateCallbacks_DefaultToCurrent();
+#region Dynamic Access
+
+		public abstract string DisplayValue { get; }
+		public abstract void StartListeningNotify( Action listener );
+		public abstract void StopListeningNotify( Action listener );
+
+#endregion
 	}
 }
