@@ -15,13 +15,11 @@ namespace MM
 	public abstract class SObservable<T> : SObservableBase
 	{
 		[SerializeField] protected Observable<T> _current;
-		public Observable<T> Current => _current;
+		public Observable<T> Current => _current ??= new Observable<T>(_defaultValue);
 		public T _defaultValue;
 
 		public void ResetToDefault( Object from = null ) => Current.Set( _defaultValue, from );
-
-		public void ForceResetToDefault() => (_current ??= new Observable<T>()).SetWithAuthority( _defaultValue );
-
+		
 #region Observable Routing
 
 		// Access (might need prior validation - T can be null)
@@ -74,7 +72,8 @@ namespace MM
 
 		protected virtual void OnEnable()
 		{
-			ForceResetToDefault();
+			// Ensure initially set to default value
+			Current.SetWithAuthority( _defaultValue, ObservableBase.ECallbackMode.Suppress );
 
 			// No listeners yet - don't flag this change for callbacks
 			_current?.SkipCallbacks();

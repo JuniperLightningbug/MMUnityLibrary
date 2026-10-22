@@ -11,9 +11,8 @@ namespace MM
 		[SerializeField] protected T _value;
 		[SerializeField] protected T _previousValue;
 
-		public Observable( T initialValue, bool bAllowExternalChanges = false )
+		public Observable( T initialValue )
 		{
-			_guard = new OwnershipGuard();
 			_value = initialValue;
 		}
 
@@ -21,8 +20,8 @@ namespace MM
 
 		public void ClearAllListeners()
 		{
-			_onChanged = null;
-			_onChangedNotify = null;
+			OnChanged = null;
+			OnChangedNotify = null;
 		}
 
 #region Lock / Release
@@ -39,8 +38,8 @@ namespace MM
 
 #region Value & Callbacks
 
-		private Action<T, T> _onChanged;
-		private Action _onChangedNotify;
+		private event Action<T, T> OnChanged;
+		private event Action OnChangedNotify;
 
 		public bool HasChangedSinceCallbacks() => !EqualityComparer<T>.Default.Equals( _previousValue, _value );
 
@@ -72,8 +71,8 @@ namespace MM
 		 */
 		public void InvokeOnChangedWithAuthority()
 		{
-			_onChanged?.Invoke( _previousValue, _value );
-			_onChangedNotify?.Invoke();
+			OnChanged?.Invoke( _previousValue, _value );
+			OnChangedNotify?.Invoke();
 
 			// Record all changes since the last callback invocation
 			_previousValue = _value;
@@ -119,13 +118,13 @@ namespace MM
 
 #region Observers
 
-		public void StartListening( Action<T, T> callback ) => _onChanged += callback;
+		public void StartListening( Action<T, T> callback ) => OnChanged += callback;
 
-		public void StartListening( Action callback ) => _onChangedNotify += callback;
+		public void StartListening( Action callback ) => OnChangedNotify += callback;
 
-		public void StopListening( Action<T, T> callback ) => _onChanged -= callback;
+		public void StopListening( Action<T, T> callback ) => OnChanged -= callback;
 
-		public void StopListening( Action callback ) => _onChangedNotify -= callback;
+		public void StopListening( Action callback ) => OnChangedNotify -= callback;
 
 #endregion
 
@@ -146,58 +145,12 @@ namespace MM
 			DebugGetListeners.Length +
 			DebugGetListeners_NoParams.Length;
 
-		public override Delegate[] DebugGetListeners => _onChanged?.GetInvocationList() ?? Array.Empty<Delegate>();
+		public override Delegate[] DebugGetListeners => OnChanged?.GetInvocationList() ?? Array.Empty<Delegate>();
 
 		public override Delegate[] DebugGetListeners_NoParams =>
-			_onChangedNotify?.GetInvocationList() ?? Array.Empty<Delegate>();
+			OnChangedNotify?.GetInvocationList() ?? Array.Empty<Delegate>();
 
 		public override void DebugInvoke() => InvokeOnChangedWithAuthority();
-
-		public override void DebugInvoke( object from, object to )
-		{
-			if( from is T fromTyped && to is T toTyped )
-			{
-				_previousValue = fromTyped;
-				_value = toTyped;
-				InvokeOnChangedWithAuthority();
-			}
-		}
-
-#endregion
-	}
-
-	/**
-	 * Strongly typed base class for custom inspector interface & shared enum types
-	 */
-	public abstract class ObservableBase
-	{
-#region Shared Types
-
-		public enum ECallbackMode
-		{
-			Auto, // Execute callbacks if the new value differs from the current value
-			AlwaysInvoke,
-			Suppress,
-		}
-
-#endregion
-
-#region Inspector Access
-
-		public abstract int DebugGetListenerCount();
-		public abstract Delegate[] DebugGetListeners { get; }
-		public abstract Delegate[] DebugGetListeners_NoParams { get; }
-
-		public abstract void DebugInvoke();
-		public abstract void DebugInvoke( object from, object to );
-
-#endregion
-
-#region Dynamic access
-
-		public abstract string DisplayValue { get; }
-		public abstract void StartListeningNotify( Action listener );
-		public abstract void StopListeningNotify( Action listener );
 
 #endregion
 	}
